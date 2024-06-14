@@ -4,11 +4,15 @@ from itertools import repeat
 import json
 import os
 from pathlib import Path
+from pprint import pformat
 from urllib.parse import quote_plus
 from statistics import NormalDist
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
-from PIL import Image, ImageFont, ImageDraw
+from PIL.Image import Image
+import PIL
+
+from character_to_image import create_image_from_character_in_file
 
 MANIFEST_FILE_NAME = "manifest.json"
 ARTIFICIAL_HEIGHT = 75
@@ -18,19 +22,33 @@ class ImageSet:
     def __init__(self, directory: Path):
         self.__directory = directory
         self.__manifest: Dict = {}
-        if self.manifest_filename.exists():
-            with open(self.manifest_filename, 'r') as m:
+        if self.manifest_filepath.exists():
+            with open(self.manifest_filepath, 'r') as m:
                 self.__manifest = json.load(m)
                 if not isinstance(self.__manifest, dict):
                     raise Exception(f"Manifest in {self.__manifest_filename} is not recognized")
 
     @property
-    def manifest_filename(self):
+    def manifest_filepath(self):
         return self.__get_path_from_filename(MANIFEST_FILE_NAME)
 
     @property
     def is_filled(self):
         return bool(self.__manifest)
+    
+    @property
+    def number_of_images(self) -> int:
+        if self.is_filled:
+            return sum(len(filenames) for filenames in self.__manifest.values())
+        raise Exception("Image set has not been filled yet, could not determine number of images")
+    
+    @property 
+    def number_of_pixels_per_image(self) -> int:
+        if self.is_filled:
+            first_image: Image = self.__get_first_image()
+            width, height = first_image.size
+            return width * height
+        raise Exception("Image set has not been filled yet, could not determine number of pixels per image")
     
     def create_artificial_set_for_characters(self, characters: str, repeats: int=50, location_noise: float=0.0,
                                              random_seed: int=1973):
@@ -51,7 +69,8 @@ class ImageSet:
                 candidate_filename = f"{character}_{i}.png"
                 final_filename = quote_plus(candidate_filename)
                 final_path = self.__get_path_from_filename(final_filename)
-                self.__create_file(character, final_path, next(noise_iter), next(noise_iter))
+                create_image_from_character_in_file(final_path, character, ARTIFICIAL_WIDTH, ARTIFICIAL_HEIGHT, 
+                                                    next(noise_iter), next(noise_iter))
                 self.__manifest[character].append(final_filename)
         self.__write_manifest_file()
 
@@ -59,29 +78,28 @@ class ImageSet:
         for _, image_files in self.__manifest.items():
             for image_file in image_files:
                 os.remove(self.__get_path_from_filename(image_file))
-        os.remove(self.manifest_filename)
+        if self.manifest_filepath.exists():
+            os.remove(self.manifest_filepath)
         self.__manifest = {}
 
+    def get_data(self) -> List[Tuple[str, Image]]:
+        if not self.is_filled:
+            raise Exception("Can not get images from empty image set")
+        result = []
+        for character, filenames in self.__manifest.items():
+            for filename in filenames:
+                result.append( (character, PIL.Image.open(self.__get_path_from_filename(filename))))
+        return result
+
     def __write_manifest_file(self):
-        with open(self.manifest_filename, 'w') as f:
-            json.dump(self.__manifest, f)
+        with open(self.manifest_filepath, 'w') as f:
+            f.write(pformat(self.__manifest, indent=4, compact=True).replace("'",'"'))
+            # json.dump(self.__manifest, f, indent=4)
 
-    def __create_file(self, character: str, filename: Path, offset_x: float=0.0, offset_y: float=0.0):
-        grey_scale_mode = "L"
-        img = Image.new(grey_scale_mode, size=(ARTIFICIAL_WIDTH, ARTIFICIAL_HEIGHT))
-        img.paste( (255,), (0, 0, ARTIFICIAL_WIDTH, ARTIFICIAL_HEIGHT))
-        courier = ImageFont.truetype('Courier', 64)
-        draw = ImageDraw.Draw(img)
-        size = draw.textsize(character, font=courier)
-        location = self.__get_location_for_text(offset_x, offset_y, *size)
-        draw.text(location, character, font=courier, fill=(0,))
-        img.save(filename)
-
-    def __get_location_for_text(self, offset_x: float, offset_y: float, width: int, height: int) -> Tuple:
-        location_x = (ARTIFICIAL_WIDTH-width)//2 + round(offset_x)
-        location_y = (ARTIFICIAL_HEIGHT-height)//2 + round(offset_y)
-        return location_x, location_y
-    
     def __get_path_from_filename(self, filename):
         return self.__directory / filename
 
+    def __get_first_image(self):
+        for _, filenames in self.__manifest:
+            return Image.open(self.__get_path_from_filename(filenames[0]))
+        raise Exception("Image set not filled, could not obtain an image")
