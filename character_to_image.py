@@ -15,7 +15,7 @@ def create_image_for_character(character: str, image_width: int, image_height: i
     grey_scale_mode = "L"
     img = Image.new(grey_scale_mode, size=(image_width, image_height))
     img.paste( (200,), (0, 0, image_width, image_height))
-    courier = ImageFont.truetype('Courier', 64)
+    courier = ImageFont.truetype('cour', 16)
     draw = ImageDraw.Draw(img)
     text_width, text_height = draw.textsize(character, font=courier)
     location = __get_location_for_text(image_width, image_height, text_width, text_height, offset_x, offset_y)

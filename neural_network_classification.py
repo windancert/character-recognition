@@ -13,6 +13,9 @@ class NeuralNetworkClassification(Classification):
 
     def train_on_matrix(self, images_as_matrix: ndarray, classifications_as_vector: ndarray):
         self.__classifier.fit(images_as_matrix, classifications_as_vector)
+        # self.__classifier.fit(images_as_matrix, classifications_as_vector)
+        # self.__classifier.fit(images_as_matrix, classifications_as_vector)
+        # self.__classifier.fit(images_as_matrix, classifications_as_vector)
 
     def classifiy_from_vector(self, image_as_vector: ndarray) -> int:
         result = self.__classifier.predict(image_as_vector.reshape(1, -1))

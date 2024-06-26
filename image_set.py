@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 from pprint import pformat
-from urllib.parse import quote_plus
+from urllib.parse import quote
 from statistics import NormalDist
 from typing import Dict, List, Tuple
 
@@ -15,8 +15,8 @@ import PIL
 from character_to_image import create_image_from_character_in_file
 
 MANIFEST_FILE_NAME = "manifest.json"
-ARTIFICIAL_HEIGHT = 75
-ARTIFICIAL_WIDTH = 50
+ARTIFICIAL_HEIGHT = 15
+ARTIFICIAL_WIDTH = 10
 
 class ImageSet:
     def __init__(self, directory: Path):
@@ -67,7 +67,7 @@ class ImageSet:
                 self.__manifest[character] = []
             for i in range(1,repeats+1):
                 candidate_filename = f"{character}_{i}.png"
-                final_filename = quote_plus(candidate_filename)
+                final_filename = quote(candidate_filename)
                 final_path = self.__get_path_from_filename(final_filename)
                 create_image_from_character_in_file(final_path, character, ARTIFICIAL_WIDTH, ARTIFICIAL_HEIGHT, 
                                                     next(noise_iter), next(noise_iter))
