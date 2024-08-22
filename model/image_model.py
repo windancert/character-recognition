@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 import PIL
+from PIL.ImageQt import ImageQt
 from PIL.Image import Image
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -24,6 +25,6 @@ class ImageModel(QObject):
 
     def load_image(self, path_to_file: Path) -> None:
         self.__image_path = path_to_file
-        self.__image = PIL.Image.open(self.__image_path)
+        image = PIL.Image.open(self.__image_path)
+        self.__image = ImageQt(image)
         self.image_changed.emit()
-
